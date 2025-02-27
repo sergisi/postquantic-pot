@@ -12,6 +12,7 @@ It has some helper functions to collect more than one execution,
 skimming all the times that the protocol has been correct.
 '''
 import numpy as np
+import time
 from concurrent.futures import ProcessPoolExecutor
 import dataclasses as dto
 import math
@@ -34,7 +35,18 @@ CBD = 2
 Zp=Integers(p)
 Zpx.<x> = Zp[]
 ZpxQ = Zpx.quotient(x**DEGREE + 1, 'X')
-rand_gauss = DisGauss(ZpxQ, DEGREE, sigma=2.87)
+
+@dto.dataclass
+class Count:
+	n: int = 0
+	
+	def __call__(self):
+		self.n += 1
+
+bob_count = Count()
+alice_count = Count()
+transmission_count = Count()
+
 
 def cbd(n: int = CBD):
 	return random.binomialvariate(n, 0.5) \
@@ -90,11 +102,17 @@ def random_vector_column_small(size=N, rand_element = lambda: random_element_sma
 		m[i,0] = rand_element()
 	return(m)
 
+@functools.lru_cache
+def get_gauss(n: int):
+	return DisGauss(ZpxQ, DEGREE, sigma=sqrt(n / 2))
+
 def r_small(n):
 	''' 
 		The purpose of this function is to change easily the 
 		type of random that the protocol uses.
 	'''
+	if n > 30:
+		return get_gauss(n)()
 	return random_element_small(rand_function=lambda: cbd(n))
 
 def r_small_col(n): 
@@ -161,50 +179,84 @@ def apply_mask(ls, mask):
 
 
 @dto.dataclass 
-class CPlanData:
+class SetUpData:
 	b:  'ZpxQ'
 	a:  'matrix'
 	A:  'matrix'
-	s:  'matrix'
 	C:  'matrix'
-	c:  'ZpxQ'
-	e1: 'ZpxQ'
-	e2: 'ZpxQ'
-	r1: 'ZpxQ'
-	r2: 'ZpxQ'
-	ab_product: 'ZpxQ'
-	mask: list[int]
 	expected_message: 'matrix'
-	expected: 'matrix'
-	actual: 'matrix'
+	mask: list[int]
+	e2: 'ZpxQ'
+	r2: 'ZpxQ'
 
-def _protocol(s_param = 2, e1_param = 100_000, e2_param = 200):
+	@functools.cached_property
+	def expected(self):
+		return apply_mask(collapse(self.expected_message), self.mask) 
+
+	def compute_c(self, s):
+		return self.A * self.a + self.C * s
+
+
+def _bob_set_up(s_param,  e2_param):
+	n_elems = 2
+	n_cols = 2 
+	n_matrix = 3
+	bob_count.n += n_elems + n_cols * M + n_matrix * (N * M)
 	b = random_element()
 	a = r_small_col(s_param)
 	A = random_matrix()
-	s = r_small_col(s_param)
 	C = random_matrix()
 	expected_message = b * A * a
-	mask = list_of_bits(expected_message)
-	expected = apply_mask(collapse(expected_message), mask)
-	c = A * a + C * s
-	e1 = r_small(e1_param)
+	mask = list_of_bits(expected_message)  # not counted
 	e2 = r_small_col(e2_param).transpose()
-	r1 = b*c + e1
-	r2 = b*C + e2
-	ab_product = r1 - r2 * s
-	actual = apply_mask(collapse(ab_product), mask)
-	return CPlanData(b, a, A, s, C, c, e1, e2, r1, r2, ab_product, mask, expected_message, expected, actual)
+	r2 = b * C + e2
+	return SetUpData(b, a, A, C, expected_message, mask, e2, r2)
+
+@dto.dataclass 
+class ProtocolData:
+	s:  'matrix'
+	c:  'ZpxQ'
+	e1: 'ZpxQ'
+	r1: 'ZpxQ'
+	ab_product: 'ZpxQ'
+	actual: 'matrix'
+
+@dto.dataclass 
+class CPlanData:
+	set_up_data: SetUpData
+	protocol_data: ProtocolData
+
+	def check(self):
+		return self.set_up_data.expected == self.protocol_data.actual
+
+def _protocol(set_up_data, s_param, e1_param):
+	alice_count()
+	s = r_small_col(s_param)
+	transmission_count()
+	alice_matrix = 2
+	alice_count.n += alice_matrix * (N * M)
+	c = set_up_data.compute_c(s)
+	bob_count.n += 2
+	e1 = r_small(e1_param)
+	transmission_count()
+	r1 = set_up_data.b * c + e1
+	alice_count()
+	ab_product = r1 - set_up_data.r2 * s
+	actual = apply_mask(collapse(ab_product), set_up_data.mask)
+	return ProtocolData(s, c, e1, r1, ab_product, actual)
 
 
-def protocol():
-	data = _protocol()
-	return 0 if data.actual == data.expected else 1
-	
+def protocol(s_param = 2, e1_param = 100_000, e2_param = 200):
+	set_up_data = _bob_set_up(s_param, e2_param)
+	protocol_data = _protocol(set_up_data, s_param, e1_param)
+	data = CPlanData(set_up_data, protocol_data)
+	return data.check()	
 
-def protocol_collect_data():
-	data = _protocol(2, 100_000, 100)
-	return None if data.actual == data.expected else data
+def protocol_collect_data(s_param = 2, e1_param = 100_000, e2_param = 200):
+	set_up_data = _bob_set_up(s_param, e2_param)
+	protocol_data = _protocol(set_up_data, s_param, e1_param)
+	data = CPlanData(set_up_data, protocol_data)
+	return None if data.check() else data
 	
 def check_some(_):
 	res = []
@@ -219,5 +271,40 @@ def collect_data():
 		return list(itertools.chain(*ls))
 
 
+def _study_singular_time(_, s_param = 2, e1_param = 100_000, e2_param = 200):
+	t0 = time.time()
+	set_up_data = _bob_set_up(s_param, e2_param)
+	t1 = time.time() 
+	protocol_data = data = _protocol(set_up_data, s_param, e1_param)
+	t2 = time.time() 
+	return t1 - t0, t2 - t1
+
+def study_time():
+	with ProcessPoolExecutor() as executor:
+			for t1, t2 in executor.map(_study_singular_time, range(10_000)):
+				yield t1, t2
+	
+
+def write_study_time():
+	with open('time.csv', 'w') as f:
+		for t1, t2 in study_time():
+			print(f'{t1}, {t2}', file=f)
+
+# Test that homomorphic is working.
+# test_homomorphic()
+# Test is not needed, less bits is also efficient.
+# assert protocol()  # messes with the count
+
+
+import cProfile
+
 if __name__ == "__main__":
-    print(protocol())
+	cProfile.run('protocol()')
+	print('\n\n\n\n\n\n\n')
+	print('Study of number of elements')
+	print(f'Bob count {bob_count}')
+	print(f'Alice count {alice_count}')
+	print(f'Transmission count {transmission_count}')
+
+
+

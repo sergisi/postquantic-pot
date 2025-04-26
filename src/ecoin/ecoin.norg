@@ -1,0 +1,41 @@
+@document.meta
+title: ecoin
+description: 
+authors: sergi
+categories: 
+created: 2025-04-25T12:38:15+0100
+updated: 2025-04-25T12:38:15+0100
+version: 1.1.1
+@end
+
+* Description of the protocol
+  The protocol is based on three building blocks.
+	
+  - A PK encription protocol, i.e. Kyber
+  - A Signature, i.e. Falcon
+  - A forgable Blind signature, i.e. Ballens' one
+
+  WHAT do I need to implement:
+  ~ The Pk encryption
+  ~ The integration with Falcon (already implemented)
+  ~ The blind Signature (which on itself is just a NIZK)
+
+  Protocols needed to implement:
+  ~ Set-Up of items
+  ~ E-coin Generation
+  ~ Item retrieval
+
+* ( ) List of tasks
+** ( ) Kyber Encryption
+   It's a necessary building block
+*** ( ) Set-up
+*** ( ) Enc
+*** ( ) Dec
+** ( ) OAEP 
+   The OAEP hash is needed to make the forgable blind signature
+** ( ) Set-up of items
+** ( ) E-coin generation
+** ( ) Item retrieval
+** ( ) TESTS
+
+

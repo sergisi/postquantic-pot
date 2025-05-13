@@ -1,3 +1,5 @@
+import itertools as it
+import functools as fun
 import typing
 from sage.all_cmdline import (
     Integer,
@@ -17,26 +19,34 @@ from sage.stats.distributions.discrete_gaussian_polynomial import (
     DiscreteGaussianDistributionPolynomialSampler as DisGauss,
 )
 
-from src.poly import Poly
+from src.poly import Poly, PolyVec
 from .falcon_params import params
 from os import urandom
 
 
 @dto.dataclass
-class KyberContext:
+class DilithiumExtra:
+    gamma1: int
+    gamma2: int
+    beta: int
+    tau: int
+
+
+@dto.dataclass
+class KyberContext[T]:
     """
     Space where the falcon and the blind signature work.
 
     """
+
     q: int
     degree: int
     k: int
+    l: int
     cbd_noise: int
     rej_sampling_module: int
     safe_mask: int
-    kyber_q: int
-    kyber_s: int
-
+    more: T
 
     @functools.cached_property
     def salt(self) -> bytes:
@@ -49,7 +59,8 @@ class KyberContext:
     @functools.cached_property
     def rej_sampling_bound(self):
         return max(
-            self.rej_sampling_s * math.sqrt(2 * self.degree), params[self.degree].sig_bound
+            self.rej_sampling_s * math.sqrt(2 * self.degree),
+            params[self.degree].sig_bound,
         )
 
     def update(self, **kwargs) -> "KyberContext":
@@ -92,8 +103,9 @@ class KyberContext:
 
     def random_matrix(self):
         return matrix(
-            [[self.random_element() for _ in range(self.k)]  
-             for _ in range(self.k)], self.ZpxQ, immutable=True
+            [[self.random_element() for _ in range(self.k)] for _ in range(self.k)],
+            base_ring=self.ZpxQ,
+            immutable=True,
         )
 
     def random_element_small(
@@ -114,7 +126,6 @@ class KyberContext:
         if rand_element is None:
             rand_element = lambda: self.random_element_small()
         return vector([rand_element() for _ in range(size)], self.ZpxQ, immutable=True)
-
 
     @functools.cached_property
     def get_gauss(self) -> typing.Callable[[int], typing.Callable[[], int]]:
@@ -185,14 +196,54 @@ class KyberContext:
         return sum(x * 2**i for x, i in enumerate(ls[i] for i in mask))
 
     def from_ring(self, m: Poly) -> int:
-        return sum(x * 2 ** i for x, i in enumerate(m))
+        m_it = self.collapse(m)
+        return sum(x << i for i, x in enumerate(m_it))
 
-    def _gen_to_ring(self, m:int):
+    def _gen_to_ring(self, m: int):
         q2 = self.q // 2
         for _ in range(self.degree):
             yield (m % 2) * q2
             m = m // 2
 
-    def to_ring(self, m: int) -> Poly:
-        return self.ZpxQ(self._gen_to_ring(m))
+    def collapse_bits_tight(self, poly: Poly):
+        def f(a: int, b: int) -> int:
+            return a * self.q + b
+        
+        all_coefficients = list(map(int, it.chain.from_iterable(poly)))
+        return fun.reduce(f, all_coefficients, 0)
 
+    def to_ring(self, m: int) -> Poly:
+        return self.ZpxQ(list(self._gen_to_ring(m)))
+
+    def inf_norm(self, zs: PolyVec):
+        coefficients = it.chain.from_iterable(self.collapse_even_gen(z) for z in zs)
+        return max(abs(x) for x in coefficients)
+
+
+def get_kyber_context() -> KyberContext[None]:
+    return KyberContext(
+        q=3329,
+        degree=256,
+        k=4,
+        l=4,
+        cbd_noise=2,
+        rej_sampling_module=5,
+        safe_mask=500,
+        more=None,
+    )
+
+
+def get_dilithium_context() -> KyberContext[DilithiumExtra]:
+    # NOTE: NIST Security level 2, Table 2 on
+    #  \cite{dilithium-spec}
+    q = 8380417
+    return KyberContext(
+        q=q,
+        degree=256,
+        k=4,
+        l=4,
+        cbd_noise=2,
+        rej_sampling_module=5,
+        safe_mask=500,
+        more=DilithiumExtra(gamma1=2**17, gamma2=(q - 1) // 88, beta=78, tau=39),
+    )

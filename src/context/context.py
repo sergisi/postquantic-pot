@@ -33,6 +33,7 @@ class Context:
     small_degree: int
     small_max_value: int
     rej_sampling_module: int
+    safe_mask: int
     # NOTE: s_param = cbd_noise,
     # e1_param and e2_param exist
     e1_param: int
@@ -178,7 +179,7 @@ class Context:
         q4 = q2 // 2
         v3 = (abs(coef - q4) for coef in v2)
         v4 = ((c, i) for i, c in enumerate(v3))
-        v5 = list(filter(lambda x: x[0] > 2000, v4))
+        v5 = list(filter(lambda x: x[0] > safe_mask, v4))
         res = random.sample(v5, k=self.degree // 4)
         # gotta_go_fast breaks if not
         # but on normal executions it will still be 256

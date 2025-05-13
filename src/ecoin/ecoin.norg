@@ -26,16 +26,30 @@ version: 1.1.1
   ~ Item retrieval
 
 * ( ) List of tasks
-** ( ) Kyber Encryption
+** (x) Kyber Encryption
    It's a necessary building block
-*** ( ) Set-up
-*** ( ) Enc
-*** ( ) Dec
-** ( ) OAEP 
+*** (x) Set-up
+*** (x) Enc
+*** (x) Dec
+
+** ( ) OAEP Digest
+
+** (x) OAEP 
    The OAEP hash is needed to make the forgable blind signature
+
 ** ( ) Set-up of items
+   E coin does not need this.
+
 ** ( ) E-coin generation
 ** ( ) Item retrieval
-** ( ) TESTS
+** (?) TESTS
+** (x) Dilithium
+*** (x) Decompose, HighBits, LowBits
+*** (x) Parameters
+*** (x) Generate $c$ from parameters
+*** (x) THE rejection sampling 
+    I cannot use the other one, as it takes into account 
+    faulty signatures.
+
 
 

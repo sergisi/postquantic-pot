@@ -14,6 +14,7 @@ def get_context(cbd_noise=2, e1_param=100_000, e2_param=200) -> Context:
         small_degree=1024,
         small_max_value=2,
         rej_sampling_module=5,
+        safe_mask=2000,
         e1_param=e1_param,
         e2_param=e2_param,
     )
@@ -29,6 +30,7 @@ def gotta_go_fast_context():
         small_degree=64,
         small_max_value=2,
         rej_sampling_module=5,
+        safe_mask=2000,
         e1_param=2,
         e2_param=2,
     )

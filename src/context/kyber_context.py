@@ -224,13 +224,24 @@ class KyberContext[T]:
             yield (m % 2) * q2
             m = m // 2
 
-    def bits_to_vector(self, bits: bytes) -> PolyVec | None:
+    def digest(self, a_seed: bytes, b: PolyVec) -> bytes:
+        # NOTE: Hi ha molts molts bits del collapse
+        b_bytes = b''.join(self.poly_to_bits(bi) for bi in b)
+        return a_seed + b_bytes
+
+    def from_digest(self, nyom: bytes) -> tuple[bytes, PolyVec]:
+        a_seed = nyom[:32]
+        b_digest: bytes = nyom[32:]
+        b = self.bits_to_vector(b_digest)
+        return a_seed, b
+
+    def bits_to_vector(self, bits: bytes) -> PolyVec:
         res = []
-        for start, end in it.pairwise(range(0, len(bits), self.poly_bytes)):
+        for start, end in it.pairwise(range(0, len(bits) + 1, self.poly_bytes)):
             res.append(self.bits_to_poly(bits[start:end]))
         return vector(res, self.ZpxQ, immutable=True)
 
-    def bits_to_poly(self, bits: bytes) -> Poly | None:
+    def bits_to_poly(self, bits: bytes) -> Poly:
         assert len(bits) == self.poly_bytes
         n = int.from_bytes(bits)
         res = []
@@ -238,7 +249,8 @@ class KyberContext[T]:
             res.append(n % self.q)
             n //= self.q
         if n != 0:
-            return None
+            print(f"bits_to_poly: n was not 0 {n}")
+        res.reverse()
         return self.ZpxQ(res)
 
     def poly_to_bits(self, poly: Poly) -> bytes:

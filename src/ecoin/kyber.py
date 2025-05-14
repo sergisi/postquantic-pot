@@ -1,3 +1,4 @@
+import random
 from src.context.kyber_context import KyberContext
 from src.poly import Poly, PolyVec, PolyMat
 import functools as fun
@@ -6,6 +7,7 @@ import dataclasses as dto
 
 @dto.dataclass()
 class Kyber:
+    a_seed: bytes
 
     A: PolyMat
     s: PolyVec
@@ -28,4 +30,6 @@ class Kyber:
 
 
 def kyber_key_gen(ctx: KyberContext) -> Kyber:
-    return Kyber(ctx.random_matrix(), ctx.r_small_vector(), ctx.r_small_vector(), ctx)
+    a_seed: bytes = random.randbytes(32)
+    A = ctx.random_matrix(seed=int.from_bytes(a_seed))
+    return Kyber(a_seed, A, ctx.r_small_vector(), ctx.r_small_vector(), ctx)

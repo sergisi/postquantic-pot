@@ -21,3 +21,12 @@ class TestKyber(unittest.TestCase):
         enc_m = self.kyber.enc(message)
         dec_m = self.kyber.dec(enc_m)
         self.assertEqual(message, dec_m)
+
+    def test_digest_and_from(self):
+        digest = self.ctx.digest(self.kyber.a_seed, self.kyber.b)
+        digest2 = self.ctx.digest(self.kyber.a_seed, self.kyber.b)
+        self.assertEqual(digest, digest2, "Digest is not deterministic")
+        a_seed, b = self.ctx.from_digest(digest)
+        self.assertEqual(self.kyber.a_seed, a_seed)
+        self.assertEqual(self.kyber.b, b)
+

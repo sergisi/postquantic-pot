@@ -27,18 +27,6 @@ def centered_mod(z: PolyVec, alpha: int):
     return z.map_coefficients(_convert_poly(alpha))
 
 
-def digest(a_seed: bytes, b: PolyVec, ctx: KyberContext) -> bytes:
-    # NOTE: Hi ha molts molts bits del collapse
-    b_bytes = sum(ctx.poly_to_bits(bi) for bi in b)
-    return a_seed + b_bytes
-
-
-def from_digest(nyom: bytes, ctx: KyberContext) -> None:
-    a_seed = nyom[:32]
-    b_digest: int = int.from_bytes(nyom[32:])
-    b = ctx.bytes_to_vector(b_digest)
-    return a_seed, b
-
 
 def f(a: int, b: int) -> int:
     return a * 64 + b

@@ -56,3 +56,12 @@ class TestDilithium(unittest.TestCase):
             sig = self.dilithium.signature(message)
             self.assertTrue(self.dilithium.verify(message, sig))
             self.assertFalse(self.dilithium.verify(message + 10, sig))
+
+    def test_digest_and_from(self):
+        digest = self.ctx.digest(self.dilithium.a_seed, self.dilithium.b)
+        digest2 = self.ctx.digest(self.dilithium.a_seed, self.dilithium.b)
+        self.assertEqual(digest, digest2, "Digest is not deterministic")
+        a_seed, b = self.ctx.from_digest(digest)
+        self.assertEqual(self.dilithium.a_seed, a_seed)
+        self.assertEqual(self.dilithium.b, b)
+

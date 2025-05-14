@@ -1,6 +1,7 @@
 import itertools as it
 import functools as fun
 import typing
+from sage.all import set_random_seed
 from sage.all_cmdline import (
     Integer,
     matrix,
@@ -22,6 +23,19 @@ from sage.stats.distributions.discrete_gaussian_polynomial import (
 from src.poly import Poly, PolyVec
 from .falcon_params import params
 from os import urandom
+
+
+def seeded_function(f):
+    @fun.wraps(f)
+    def wrapper(*args, seed: int | None = None, **kwargs):
+        if seed is None:
+            return f(*args, **kwargs)
+        set_random_seed(seed)
+        res = f(*args, **kwargs)
+        set_random_seed()  # NOTE: Reset state
+        return res
+
+    return wrapper
 
 
 @dto.dataclass
@@ -63,6 +77,10 @@ class KyberContext[T]:
             params[self.degree].sig_bound,
         )
 
+    @property
+    def poly_bytes(self):
+        return math.ceil(self.degree * math.log2(self.q) / 8)
+
     def update(self, **kwargs) -> "KyberContext":
         return KyberContext(**(dto.asdict(self) | kwargs))
 
@@ -101,6 +119,7 @@ class KyberContext[T]:
             [self.random_element() for _ in range(self.k)], self.ZpxQ, immutable=True
         )
 
+    @seeded_function
     def random_matrix(self):
         return matrix(
             [[self.random_element() for _ in range(self.k)] for _ in range(self.k)],
@@ -205,12 +224,30 @@ class KyberContext[T]:
             yield (m % 2) * q2
             m = m // 2
 
-    def collapse_bits_tight(self, poly: Poly):
+    def bits_to_vector(self, bits: bytes) -> PolyVec | None:
+        res = []
+        for start, end in it.pairwise(range(0, len(bits), self.poly_bytes)):
+            res.append(self.bits_to_poly(bits[start:end]))
+        return vector(res, self.ZpxQ, immutable=True)
+
+    def bits_to_poly(self, bits: bytes) -> Poly | None:
+        assert len(bits) == self.poly_bytes
+        n = int.from_bytes(bits)
+        res = []
+        for _ in range(self.degree):
+            res.append(n % self.q)
+            n //= self.q
+        if n != 0:
+            return None
+        return self.ZpxQ(res)
+
+    def poly_to_bits(self, poly: Poly) -> bytes:
         def f(a: int, b: int) -> int:
             return a * self.q + b
-        
-        all_coefficients = list(map(int, it.chain.from_iterable(poly)))
-        return fun.reduce(f, all_coefficients, 0)
+
+        all_coefficients = map(int, poly)
+        poly_int = fun.reduce(f, all_coefficients, 0)
+        return poly_int.to_bytes(length=self.poly_bytes)
 
     def to_ring(self, m: int) -> Poly:
         return self.ZpxQ(list(self._gen_to_ring(m)))

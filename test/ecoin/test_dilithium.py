@@ -21,6 +21,11 @@ class TestDilithium(unittest.TestCase):
         self.dilithium = dilithium_key_gen(self.ctx)
         super().setUp()
 
+    def test_matrix_seeded(self):
+        mat = self.ctx.random_matrix(seed=12345)
+        mat2 = self.ctx.random_matrix(seed=12345)
+        self.assertEqual(mat, mat2)
+
     def test_collapse_bits(self):
         z = self.ctx.random_vector()
         z_high = self.dilithium.decompose(z, self.dilithium.double_gamma2)[1]

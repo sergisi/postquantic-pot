@@ -226,7 +226,7 @@ class KyberContext[T]:
 
     def digest(self, a_seed: bytes, b: PolyVec) -> bytes:
         # NOTE: Hi ha molts molts bits del collapse
-        b_bytes = b''.join(self.poly_to_bits(bi) for bi in b)
+        b_bytes = b"".join(self.poly_to_bits(bi) for bi in b)
         return a_seed + b_bytes
 
     def from_digest(self, nyom: bytes) -> tuple[bytes, PolyVec]:

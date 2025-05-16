@@ -1,4 +1,6 @@
 import random
+import secrets
+from . import oaep
 from src.context.kyber_context import KyberContext
 from src.poly import Poly, PolyVec, PolyMat
 import functools as fun
@@ -13,6 +15,23 @@ class Kyber:
     s: PolyVec
     e: PolyVec
     ctx: KyberContext
+
+    @fun.cached_property
+    def r(self):
+        """
+        r to convert the pk. Cached so that is replicable.
+
+        """
+        return secrets.randbits(256).to_bytes()
+
+    def digest(self) -> tuple[bytes, bytes]:
+        """
+        32 bytes that represents the dilithium pk.
+
+        """
+        message = self.ctx.digest(self.a_seed, self.b)
+        return oaep.enc(message, self.r)
+
 
     @fun.cached_property
     def b(self):

@@ -29,4 +29,3 @@ class TestKyber(unittest.TestCase):
         a_seed, b = self.ctx.from_digest(digest)
         self.assertEqual(self.kyber.a_seed, a_seed)
         self.assertEqual(self.kyber.b, b)
-

@@ -1,7 +1,8 @@
 import random
+from . import oaep
+import secrets
 import dataclasses as dto
 from Crypto.Hash import SHAKE256
-
 import functools as fun
 import itertools as it
 from src.context.kyber_context import KyberContext, DilithiumExtra
@@ -27,7 +28,6 @@ def centered_mod(z: PolyVec, alpha: int):
     return z.map_coefficients(_convert_poly(alpha))
 
 
-
 def f(a: int, b: int) -> int:
     return a * 64 + b
 
@@ -43,8 +43,23 @@ class Dilithium:
     A: PolyMat
     s: PolyVec
     b: PolyVec
-
     ctx: KyberContext[DilithiumExtra]
+
+    @fun.cached_property
+    def r(self):
+        """
+        r to convert the pk. Cached so that is replicable.
+
+        """
+        return secrets.randbits(256).to_bytes()
+
+    def digest(self) -> tuple[bytes, bytes]:
+        """
+        32 bytes that represents the dilithium pk.
+
+        """
+        message = self.ctx.digest(self.a_seed, self.b)
+        return oaep.enc(message, self.r)
 
     def rej_sampling(self, z: PolyVec, y: PolyVec, c: Poly) -> bool:
         return (

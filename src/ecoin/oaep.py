@@ -20,19 +20,19 @@ import operator
 
 def enc(m: bytes, r: bytes) -> tuple[bytes, bytes]:
     xof = SHAKE256.new(r)
-    gr = xof.read(32)
+    gr = xof.read(len(m))
     x = bytes(map(operator.xor, m, gr))
     xof = SHAKE256.new(x)
-    hx = xof.read(32)
+    hx = xof.read(len(r))
     y = bytes(map(operator.xor, r, hx))
-    return (x, y)
+    return (x, y)  # NOTE: x is m bytes, y is r bytes
 
 
 def dec(x: bytes, y: bytes) -> tuple[bytes, bytes]:
     xof = SHAKE256.new(x)
-    hx = xof.read(32)
+    hx = xof.read(len(y))
     r = bytes(map(operator.xor, y, hx))
     xof = SHAKE256.new(r)
-    gr = xof.read(32)
+    gr = xof.read(len(x))
     m = bytes(map(operator.xor, x, gr))
     return (m, r)

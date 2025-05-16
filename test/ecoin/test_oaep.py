@@ -15,3 +15,12 @@ class TestOAEP(unittest.TestCase):
         self.assertEqual(len(m), len(m_))
         self.assertEqual(m, m_)
         self.assertEqual(r, r_)
+
+    def test_oaep_different_byte_size(self):
+        m = random.randbytes(736)
+        r = random.randbytes(32)
+        x, y = oaep.enc(m, r)
+        m_, r_ = oaep.dec(x, y)
+        self.assertEqual(len(m), len(m_))
+        self.assertEqual(m, m_)
+        self.assertEqual(r, r_)

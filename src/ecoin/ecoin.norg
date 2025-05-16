@@ -26,13 +26,14 @@ version: 1.1.1
   ~ Item retrieval
 
 * ( ) List of tasks
+** (x) Digest
 ** (x) Kyber Encryption
    It's a necessary building block
 *** (x) Set-up
 *** (x) Enc
 *** (x) Dec
 
-** ( ) OAEP Digest
+** (?) OAEP Digest
 
 ** (x) OAEP 
    The OAEP hash is needed to make the forgable blind signature

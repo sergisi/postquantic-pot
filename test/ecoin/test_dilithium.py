@@ -64,4 +64,3 @@ class TestDilithium(unittest.TestCase):
         a_seed, b = self.ctx.from_digest(digest)
         self.assertEqual(self.dilithium.a_seed, a_seed)
         self.assertEqual(self.dilithium.b, b)
-

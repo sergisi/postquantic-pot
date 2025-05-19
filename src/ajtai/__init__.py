@@ -23,10 +23,10 @@ def hash_to_point(message, ctx: Context):
     Inspired by the Parse function from NewHope.
     """
     n = ctx.degree
-    if ctx.p > (1 << 16):
+    if ctx.q > (1 << 16):
         raise ValueError("The modulus is too large")
 
-    k = (1 << 16) // ctx.p
+    k = (1 << 16) // ctx.q
     # Create a SHAKE object and hash the salt and message.
     shake = SHAKE256.new()
     shake.update(ctx.salt)
@@ -40,7 +40,7 @@ def hash_to_point(message, ctx: Context):
         twobytes = shake.read(1)
         elt = twobytes[0]
         # Implicit rejection sampling
-        if elt < k * ctx.p:
+        if elt < k * ctx.q:
             hashed[i] = elt % ctx.rej_sampling_module
             i += 1
     return hashed

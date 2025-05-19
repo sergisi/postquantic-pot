@@ -1,6 +1,6 @@
 import unittest
 from src.ecoin.kyber import kyber_key_gen, Kyber
-from src.context.kyber_context import KyberContext, get_kyber_context
+from src.context import get_kyber_context, Context
 from src.poly import Poly, PolyVec, PolyMat
 import functools as fun
 import dataclasses as dto
@@ -8,7 +8,7 @@ import random
 
 
 class TestKyber(unittest.TestCase):
-    ctx: KyberContext
+    ctx: Context[None]
     kyber: Kyber
 
     def setUp(self):

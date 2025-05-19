@@ -5,7 +5,7 @@ import dataclasses as dto
 from Crypto.Hash import SHAKE256
 import functools as fun
 import itertools as it
-from src.context.kyber_context import KyberContext, DilithiumExtra
+from src.context import Context, DilithiumExtra
 from src.poly import Poly, PolyMat, PolyVec
 
 
@@ -43,7 +43,7 @@ class Dilithium:
     A: PolyMat
     s: PolyVec
     b: PolyVec
-    ctx: KyberContext[DilithiumExtra]
+    ctx: Context[DilithiumExtra]
 
     @fun.cached_property
     def r(self):
@@ -131,7 +131,7 @@ class Dilithium:
         ) < self.ctx.more.gamma1 - self.ctx.more.beta and c == self.hash_to_point(m, w)
 
 
-def dilithium_key_gen(ctx: KyberContext) -> Dilithium:
+def dilithium_key_gen(ctx: Context[DilithiumExtra]) -> Dilithium:
     a_seed: bytes = random.randbytes(32)
     A = ctx.random_matrix(seed=int.from_bytes(a_seed))
     s = ctx.r_small_vector(ctx.l)

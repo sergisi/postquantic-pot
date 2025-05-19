@@ -1,7 +1,7 @@
 import random
 import secrets
 from . import oaep
-from src.context.kyber_context import KyberContext
+from src.context  import Context
 from src.poly import Poly, PolyVec, PolyMat
 import functools as fun
 import dataclasses as dto
@@ -14,7 +14,7 @@ class Kyber:
     A: PolyMat
     s: PolyVec
     e: PolyVec
-    ctx: KyberContext
+    ctx: Context[None]
 
     @fun.cached_property
     def r(self):
@@ -48,7 +48,7 @@ class Kyber:
         return self.ctx.from_ring(v - self.s * u)
 
 
-def kyber_key_gen(ctx: KyberContext) -> Kyber:
+def kyber_key_gen(ctx: Context[None]) -> Kyber:
     a_seed: bytes = random.randbytes(32)
     A = ctx.random_matrix(seed=int.from_bytes(a_seed))
     return Kyber(a_seed, A, ctx.r_small_vector(), ctx.r_small_vector(), ctx)

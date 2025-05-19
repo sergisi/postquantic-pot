@@ -1,8 +1,8 @@
 import unittest
 import pdb
 from src.ecoin.dilithium import Dilithium, dilithium_key_gen, collapse_bits
-from src.context.kyber_context import (
-    KyberContext,
+from src.context import (
+    Context,
     DilithiumExtra,
     get_dilithium_context,
 )
@@ -13,7 +13,7 @@ import random
 
 
 class TestDilithium(unittest.TestCase):
-    ctx: KyberContext
+    ctx: Context[DilithiumExtra]
     dilithium: Dilithium
 
     def setUp(self):

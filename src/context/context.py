@@ -9,7 +9,7 @@ from sage.all_cmdline import (
     sqrt,
     matrix,
     randint,
-    set_random_seed
+    set_random_seed,
 )  # import sage library
 import math
 import numpy as np
@@ -24,7 +24,6 @@ from .falcon_params import params
 from os import urandom
 
 
-
 def seeded_function(f):
     @fun.wraps(f)
     def wrapper(*args, seed: int | None = None, **kwargs):
@@ -36,8 +35,6 @@ def seeded_function(f):
         return res
 
     return wrapper
-
-
 
 
 @dto.dataclass
@@ -151,6 +148,7 @@ class Context[T]:
         return vector([rand_element() for _ in range(size)], self.ZpxQ, immutable=True)
 
     _gauss_state: dict[int, typing.Callable[[], Poly]] = dto.field(default_factory=dict)
+
     def get_gauss(self, n: int) -> Poly:
         # NOTE: I cannot use lru_cache because ZpxQ is not hashable.
         if n not in self._gauss_state:
@@ -174,9 +172,7 @@ class Context[T]:
             n = self.k
         if like != None:
             size = len(like)
-        return self.random_vector_small(
-            size=size, rand_element=lambda: self.r_small(n)
-        )
+        return self.random_vector_small(size=size, rand_element=lambda: self.r_small(n))
 
     def collapse_even_gen(self, v) -> typing.Generator[int, None, None]:
         p2 = self.q // 2
@@ -273,7 +269,6 @@ class Context[T]:
     def inf_norm(self, zs: PolyVec):
         coefficients = it.chain.from_iterable(self.collapse_even_gen(z) for z in zs)
         return max(abs(x) for x in coefficients)
-
 
     def _to_array(self, vs: PolyVec):
         return np.array(

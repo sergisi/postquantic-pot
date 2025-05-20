@@ -1,10 +1,34 @@
 import random
 import secrets
 from . import oaep
-from src.context  import Context
+from src.context import Context
 from src.poly import Poly, PolyVec, PolyMat
 import functools as fun
 import dataclasses as dto
+
+
+@dto.dataclass
+class KyberPK:
+    a_seed: bytes
+
+    A: PolyMat
+    b: PolyVec
+    r: bytes
+    ctx: Context[None]
+
+    def digest(self) -> tuple[bytes, bytes]:
+        """
+        32 bytes that represents the dilithium pk.
+
+        """
+        message = self.ctx.digest(self.a_seed, self.b)
+        return oaep.enc(message, self.r)
+
+    def enc(self, m: int):
+        r = self.ctx.r_small_vector()
+        e1 = self.ctx.r_small_vector()
+        e2 = self.ctx.r_small()
+        return (self.A.transpose() * r + e1, self.b * r + e2 + self.ctx.to_ring(m))
 
 
 @dto.dataclass()
@@ -31,7 +55,6 @@ class Kyber:
         """
         message = self.ctx.digest(self.a_seed, self.b)
         return oaep.enc(message, self.r)
-
 
     @fun.cached_property
     def b(self):

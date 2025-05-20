@@ -4,6 +4,7 @@ from sage.all import Integer
 import numpy as np
 import functools as fun
 
+
 @fun.lru_cache()
 def get_kyber_context() -> Context[None]:
     return Context(
@@ -34,8 +35,11 @@ def get_dilithium_context() -> Context[DilithiumExtra]:
         more=DilithiumExtra(gamma1=2**17, gamma2=(q - 1) // 88, beta=78, tau=39),
     )
 
+
 @fun.lru_cache
-def get_context(cbd_noise=2, e1_param=100_000, e2_param=200) -> Context[AssymetricExtra]:
+def get_context(
+    cbd_noise=2, e1_param=100_000, e2_param=200
+) -> Context[AssymetricExtra]:
     return Context(
         q=Integer(12 * 1024 + 1),
         degree=1024,

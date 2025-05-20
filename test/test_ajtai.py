@@ -13,7 +13,7 @@ def sum_all(matrices, vectors):
 
 
 class AjtaiTest(unittest.TestCase):
-    ctx: Context
+    ctx: Context[None]
 
     def setUp(self) -> None:
         self.ctx = gotta_go_fast_context()

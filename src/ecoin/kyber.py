@@ -2,7 +2,7 @@ import random
 import secrets
 from . import oaep
 from src.context import Context
-from src.poly import Poly, PolyVec, PolyMat
+from src.poly import PolyVec, PolyMat
 import functools as fun
 import dataclasses as dto
 
@@ -24,7 +24,7 @@ class KyberPK:
         message = self.ctx.digest(self.a_seed, self.b)
         return oaep.enc(message, self.r)
 
-    def enc(self, m: int):
+    def enc(self, m: int) -> tuple[PolyVec, PolyVec]:
         r = self.ctx.r_small_vector()
         e1 = self.ctx.r_small_vector()
         e2 = self.ctx.r_small()
@@ -46,7 +46,7 @@ class Kyber:
         r to convert the pk. Cached so that is replicable.
 
         """
-        return secrets.randbits(256).to_bytes()
+        return secrets.token_bytes(32)
 
     def digest(self) -> tuple[bytes, bytes]:
         """
@@ -60,11 +60,12 @@ class Kyber:
     def b(self):
         return self.A * self.s + self.e
 
-    def enc(self, m: int):
+    def enc(self, m: int) -> tuple[PolyVec, PolyVec]:
         r = self.ctx.r_small_vector()
         e1 = self.ctx.r_small_vector()
         e2 = self.ctx.r_small()
-        return (self.A.transpose() * r + e1, self.b * r + e2 + self.ctx.to_ring(m))
+        return (self.A.transpose() * r + e1, 
+                self.b * r + e2 + self.ctx.to_ring(m))
 
     def dec(self, c):
         u, v = c
@@ -73,5 +74,5 @@ class Kyber:
 
 def kyber_key_gen(ctx: Context[None]) -> Kyber:
     a_seed: bytes = random.randbytes(32)
-    A = ctx.random_matrix(seed=int.from_bytes(a_seed))
+    A = ctx.random_matrix(seed=a_seed)
     return Kyber(a_seed, A, ctx.r_small_vector(), ctx.r_small_vector(), ctx)

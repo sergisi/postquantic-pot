@@ -26,10 +26,10 @@ from os import urandom
 
 def seeded_function(f):
     @fun.wraps(f)
-    def wrapper(*args, seed: int | None = None, **kwargs):
+    def wrapper(*args, seed: bytes | None = None, **kwargs):
         if seed is None:
             return f(*args, **kwargs)
-        set_random_seed(seed)
+        set_random_seed(int.from_bytes(seed))
         res = f(*args, **kwargs)
         set_random_seed()  # NOTE: Reset state
         return res
@@ -117,7 +117,7 @@ class Context[T]:
         )
 
     @seeded_function
-    def random_matrix(self):
+    def random_matrix(self, seed: bytes | None = None):
         return matrix(
             [[self.random_element() for _ in range(self.k)] for _ in range(self.k)],
             base_ring=self.ZpxQ,

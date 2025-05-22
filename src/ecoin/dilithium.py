@@ -51,7 +51,7 @@ class Dilithium:
         r to convert the pk. Cached so that is replicable.
 
         """
-        return secrets.randbits(256).to_bytes()
+        return secrets.token_bytes(32)
 
     def digest(self) -> tuple[bytes, bytes]:
         """
@@ -84,10 +84,12 @@ class Dilithium:
         element = self.decompose(z, alpha)[1]
         return collapse_bits(element)
 
-    def _to_bytes(self, i: int) -> bytes:
+    def _to_bytes(self, i: int | bytes ) -> bytes:
+        if isinstance(i, bytes):
+            return i
         return i.to_bytes(i.bit_length())
 
-    def hash_to_point(self, message: int, salt: int) -> PolyVec:
+    def hash_to_point(self, message: int | bytes, salt: int | bytes) -> PolyVec:
         xof = SHAKE256.new()
         xof.update(self._to_bytes(message))
         xof.update(self._to_bytes(salt))
@@ -112,7 +114,7 @@ class Dilithium:
     def double_gamma2(self):
         return 2 * self.ctx.more.gamma2
 
-    def signature(self, m):
+    def sign(self, m: int | bytes):
         # NOTE: Figure 1 algorithm on \cite{dilithium-spec}
         for _ in range(20):
             y = self.ctx.r_small_vector(self.ctx.l)
@@ -133,7 +135,7 @@ class Dilithium:
 
 def dilithium_key_gen(ctx: Context[DilithiumExtra]) -> Dilithium:
     a_seed: bytes = random.randbytes(32)
-    A = ctx.random_matrix(seed=int.from_bytes(a_seed))
+    A = ctx.random_matrix(seed=a_seed)
     s = ctx.r_small_vector(ctx.l)
     e = ctx.r_small_vector(ctx.k)
     b = A * s + e

@@ -45,7 +45,7 @@ class TestDilithium(unittest.TestCase):
 
     def test_signature(self):
         message = random.getrandbits(256)
-        sig = self.dilithium.signature(message)
+        sig = self.dilithium.sign(message)
         self.assertTrue(self.dilithium.verify(message, sig))
         self.assertFalse(self.dilithium.verify(message + 10, sig))
 
@@ -53,7 +53,7 @@ class TestDilithium(unittest.TestCase):
     def test_signature_hundred(self):
         for _ in range(100):
             message = random.getrandbits(256)
-            sig = self.dilithium.signature(message)
+            sig = self.dilithium.sign(message)
             self.assertTrue(self.dilithium.verify(message, sig))
             self.assertFalse(self.dilithium.verify(message + 10, sig))
 

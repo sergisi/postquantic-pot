@@ -1,10 +1,8 @@
-import random
-import typing
+import functools as fun
+import secrets
 import operator
 import dataclasses as dto
-
-from src.context import Context, get_dilithium_context
-from src.context import DilithiumExtra, Context, get_kyber_context
+from src.context import DilithiumExtra, Context, get_dilithium_context, get_kyber_context, get_context, gotta_go_fast_context
 from src import ajtai, falcon
 from src.context.context import AssymetricExtra
 from src.poly import Poly, PolyVec
@@ -12,22 +10,6 @@ from . import kyber, dilithium, oaep
 
 
 @dto.dataclass
-class Valued:
-    kyber: kyber.Kyber
-    dilithium: dilithium.Dilithium
-    r: bytes
-    nizk: ajtai.AjtaiCommitment
-
-
-
-@dto.dataclass
-class NonValued:
-    kyber: kyber.KyberPK
-    dilithium: dilithium.Dilithium
-    r: bytes 
-    nizk: ajtai.AjtaiCommitment
-
-
 class FatContext:
     kyber: Context[None]
     dilithium: Context[DilithiumExtra]
@@ -36,17 +18,95 @@ class FatContext:
     B: PolyVec
 
 
+@fun.lru_cache(maxsize=1)
+def gotta_go_fat() -> FatContext:
+    ctx = gotta_go_fast_context()
+    return FatContext(
+        kyber=get_kyber_context(),
+        dilithium=get_dilithium_context(),
+        ctx=ctx,
+        falcon=falcon.MyFalcon(ctx),
+        B = ctx.random_vector(),
+    )
+
+
+def get_fatctx() -> FatContext:
+    ctx = get_context()
+    return FatContext(
+        kyber=get_kyber_context(),
+        dilithium=get_dilithium_context(),
+        ctx=ctx,
+        falcon=falcon.MyFalcon(ctx),
+        B = ctx.random_vector(),
+    )
+
+
+@dto.dataclass
+class Valued:
+    kyb: kyber.Kyber
+    dil: dilithium.Dilithium
+    r: bytes
+    nizk: ajtai.AjtaiCommitment
+    fatctx: FatContext
+
+    @property
+    def blob(self):
+        return bytes(map(operator.xor, self.kyb.digest()[1] , self.dil.digest()[1]))
+
+
+    @fun.cached_property
+    def signature(self):
+        return self.dil.sign(self.blob)
+
+
+    @fun.cached_property
+    def hy(self):
+        """
+        Hash of Y digest
+        """
+        _, y = oaep.enc(self.blob, self.r)
+        return self.fatctx.ctx.bits_to_poly(y)
+
+
+@dto.dataclass
+class NonValued:
+    kyb: kyber.KyberPK
+    dil: dilithium.Dilithium
+    r: bytes 
+    nizk: ajtai.AjtaiCommitment
+    fatctx : FatContext
+
+    @property
+    def blob(self):
+        return bytes(map(operator.xor, self.kyb.digest() , self.dil.digest()))
+
+
+    @fun.cached_property
+    def signature(self):
+        return self.dil.sign(self.blob)
+
+
+    @fun.cached_property
+    def hy(self):
+        """
+        Hash of Y digest
+        """
+        _, y = oaep.enc(self.blob, self.r)
+        return self.fatctx.ctx.bits_to_vector(y)
+
+
+
 def sum_all(matrices, vectors):
     return sum(A * y for A, y in zip(matrices, vectors))
 
 
-def customer_generate_ecoin(fatctx: FatContext):
+def create_valued(fatctx: FatContext):
     kyb = kyber.kyber_key_gen(fatctx.kyber)
     dil = dilithium.dilithium_key_gen(fatctx.dilithium)
-    blob = bytes(map(operator.xor, kyb.digest() , dil.digest()))
-    r = random.randbytes(fatctx.ctx.poly_bytes * fatctx.ctx.k)
+    blob = bytes(map(operator.xor, kyb.digest()[1] , dil.digest()[1]))
+    r = secrets.token_bytes(fatctx.ctx.poly_bytes)
     x, y = oaep.enc(blob, r)
-    hy = fatctx.ctx.bits_to_vector(y)
+    hy = fatctx.ctx.bits_to_poly(y)
     x = fatctx.ctx.r_small_vector()
     t = hy - fatctx.falcon.A * x
     s, r2 = merchant_blind_sign(t, fatctx)
@@ -57,7 +117,7 @@ def customer_generate_ecoin(fatctx: FatContext):
         ctx=fatctx.ctx,
         f=sum_all
     )
-    return Valued(kyb, dil, r, nizk)
+    return Valued(kyb, dil, r, nizk, fatctx)
 
 
 
@@ -66,16 +126,16 @@ def merchant_blind_sign(t: Poly, fatctx: FatContext) -> tuple[PolyVec, PolyVec]:
     s = fatctx.falcon.my_sign(t + fatctx.B * r2)
     return s, r2
 
-def generate_nonvalued(fatctx: FatContext) -> NonValued:
+def create_nonvalued(fatctx: FatContext) -> NonValued:
     s_prime = fatctx.ctx.r_small_vector()
     r2 = fatctx.ctx.r_small_vector()
     hy = fatctx.falcon.A * s_prime - fatctx.B * r2
-    x = random.randbytes(32)
+    x = secrets.token_bytes(32)
     blob, r = oaep.dec(hy, x)
     dil = dilithium.dilithium_key_gen(fatctx.dilithium)
     _, y_s = dil.digest()
     y_r = bytes(map(operator.xor, blob, y_s))
-    x_r = random.randbytes(32 + fatctx.kyber.poly_bytes * fatctx.kyber.k)
+    x_r = secrets.token_bytes(32 + fatctx.kyber.poly_bytes * fatctx.kyber.k)
     pk, r_r = oaep.dec(x_r, y_r)
     a_seed, b = fatctx.kyber.from_digest(pk)
     kyb_pk = kyber.KyberPK(a_seed, fatctx.kyber.random_matrix(seed=a_seed), b, r_r, fatctx.kyber)
@@ -85,7 +145,14 @@ def generate_nonvalued(fatctx: FatContext) -> NonValued:
         ctx=fatctx.ctx,
         f=sum_all
     )
-    return NonValued(kyb_pk, dil, r, nizk)
+    return NonValued(kyb_pk, dil, r, nizk, fatctx)
 
+
+def merchant_spend(m: bytes, ecoin: Valued | NonValued):
+    assert ecoin.nizk(), 'Blind signature is correct'
+    assert ecoin.nizk.t == ecoin.hy
+    assert ecoin.dil.verify(ecoin.blob, ecoin.signature), 'It is signed'
+    # FIX: Add ecoin has been spent.
+    return ecoin.kyb.enc(int.from_bytes(m))
 
 

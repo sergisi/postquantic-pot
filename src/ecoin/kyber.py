@@ -14,14 +14,17 @@ class KyberPK:
     A: PolyMat
     b: PolyVec
     r: bytes
+    trashbin: bytes
     ctx: Context[None]
+
+
 
     def digest(self) -> tuple[bytes, bytes]:
         """
         32 bytes that represents the dilithium pk.
 
         """
-        message = self.ctx.digest(self.a_seed, self.b)
+        message = self.ctx.digest(self.a_seed, self.b, self.trashbin)
         return oaep.enc(message, self.r)
 
     def enc(self, m: int) -> tuple[PolyVec, PolyVec]:
@@ -48,12 +51,22 @@ class Kyber:
         """
         return secrets.token_bytes(32)
 
+
+    @fun.cached_property
+    def trashbin(self):
+        """
+        trashbin to convert the pk. Cached so that is replicable.
+
+        """
+        return self.ctx.gen_trashbin()
+
+ 
     def digest(self) -> tuple[bytes, bytes]:
         """
         32 bytes that represents the dilithium pk.
 
         """
-        message = self.ctx.digest(self.a_seed, self.b)
+        message = self.ctx.digest(self.a_seed, self.b, self.trashbin)
         return oaep.enc(message, self.r)
 
     @fun.cached_property

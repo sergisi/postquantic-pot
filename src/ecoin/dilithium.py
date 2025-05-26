@@ -53,12 +53,20 @@ class Dilithium:
         """
         return secrets.token_bytes(32)
 
+    @fun.cached_property
+    def trashbin(self):
+        """
+        trashbin to convert the pk. Cached so that is replicable.
+
+        """
+        return self.ctx.gen_trashbin()
+
     def digest(self) -> tuple[bytes, bytes]:
         """
         32 bytes that represents the dilithium pk.
 
         """
-        message = self.ctx.digest(self.a_seed, self.b)
+        message = self.ctx.digest(self.a_seed, self.b, self.trashbin)
         return oaep.enc(message, self.r)
 
     def rej_sampling(self, z: PolyVec, y: PolyVec, c: Poly) -> bool:
@@ -89,7 +97,7 @@ class Dilithium:
             return i
         return i.to_bytes(i.bit_length())
 
-    def hash_to_point(self, message: int | bytes, salt: int | bytes) -> PolyVec:
+    def hash_to_point(self, message: int | bytes, salt: int | bytes) -> Poly:
         xof = SHAKE256.new()
         xof.update(self._to_bytes(message))
         xof.update(self._to_bytes(salt))
@@ -114,7 +122,7 @@ class Dilithium:
     def double_gamma2(self):
         return 2 * self.ctx.more.gamma2
 
-    def sign(self, m: int | bytes):
+    def sign(self, m: int | bytes) -> tuple[PolyVec, Poly]:
         # NOTE: Figure 1 algorithm on \cite{dilithium-spec}
         for _ in range(20):
             y = self.ctx.r_small_vector(self.ctx.l)

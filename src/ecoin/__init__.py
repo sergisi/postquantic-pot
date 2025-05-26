@@ -1,4 +1,5 @@
 import functools as fun
+from random import randint
 import secrets
 import operator
 import dataclasses as dto
@@ -65,7 +66,7 @@ class Valued:
         Hash of Y digest
         """
         _, y = oaep.enc(self.blob, self.r)
-        return self.fatctx.ctx.bits_to_poly(y)
+        return self.fatctx.ctx.bits_to_poly(y)[0]
 
 
 @dto.dataclass
@@ -78,7 +79,7 @@ class NonValued:
 
     @property
     def blob(self):
-        return bytes(map(operator.xor, self.kyb.digest() , self.dil.digest()))
+        return bytes(map(operator.xor, self.kyb.digest()[1] , self.dil.digest()[1]))
 
 
     @fun.cached_property
@@ -87,13 +88,12 @@ class NonValued:
 
 
     @fun.cached_property
-    def hy(self):
+    def hy(self) -> tuple[Poly, int]:
         """
         Hash of Y digest
         """
         _, y = oaep.enc(self.blob, self.r)
-        return self.fatctx.ctx.bits_to_vector(y)
-
+        return self.fatctx.ctx.bits_to_poly(y)[0]
 
 
 def sum_all(matrices, vectors):
@@ -106,7 +106,7 @@ def create_valued(fatctx: FatContext):
     blob = bytes(map(operator.xor, kyb.digest()[1] , dil.digest()[1]))
     r = secrets.token_bytes(fatctx.ctx.poly_bytes)
     x, y = oaep.enc(blob, r)
-    hy = fatctx.ctx.bits_to_poly(y)
+    hy, _ = fatctx.ctx.bits_to_poly(y)
     x = fatctx.ctx.r_small_vector()
     t = hy - fatctx.falcon.A * x
     s, r2 = merchant_blind_sign(t, fatctx)
@@ -120,7 +120,6 @@ def create_valued(fatctx: FatContext):
     return Valued(kyb, dil, r, nizk, fatctx)
 
 
-
 def merchant_blind_sign(t: Poly, fatctx: FatContext) -> tuple[PolyVec, PolyVec]:
     r2 = fatctx.ctx.r_small_vector()
     s = fatctx.falcon.my_sign(t + fatctx.B * r2)
@@ -129,28 +128,33 @@ def merchant_blind_sign(t: Poly, fatctx: FatContext) -> tuple[PolyVec, PolyVec]:
 def create_nonvalued(fatctx: FatContext) -> NonValued:
     s_prime = fatctx.ctx.r_small_vector()
     r2 = fatctx.ctx.r_small_vector()
+    # fatctx.ctx.
+
     hy = fatctx.falcon.A * s_prime - fatctx.B * r2
     x = secrets.token_bytes(32)
-    blob, r = oaep.dec(hy, x)
+    # FIX: not hy, but y
+    trash = randint(0, fatctx.ctx.max_trash)
+    y = fatctx.ctx.poly_to_bits(hy, trash)
+    blob, main_r = oaep.dec(x, y)
     dil = dilithium.dilithium_key_gen(fatctx.dilithium)
-    _, y_s = dil.digest()
+    x_s, y_s = dil.digest()
     y_r = bytes(map(operator.xor, blob, y_s))
     x_r = secrets.token_bytes(32 + fatctx.kyber.poly_bytes * fatctx.kyber.k)
     pk, r_r = oaep.dec(x_r, y_r)
-    a_seed, b = fatctx.kyber.from_digest(pk)
-    kyb_pk = kyber.KyberPK(a_seed, fatctx.kyber.random_matrix(seed=a_seed), b, r_r, fatctx.kyber)
+    a_seed, b, trashbin = fatctx.kyber.from_digest(pk)
+    kyb_pk = kyber.KyberPK(a_seed, fatctx.kyber.random_matrix(seed=a_seed), b, r_r, trashbin, fatctx.kyber)
     nizk = ajtai.ajtai_commitment(
         matrices=[fatctx.falcon.A, fatctx.B],
         vectors=[s_prime, -r2],
         ctx=fatctx.ctx,
         f=sum_all
     )
-    return NonValued(kyb_pk, dil, r, nizk, fatctx)
+    return NonValued(kyb_pk, dil, main_r, nizk, fatctx)
 
 
 def merchant_spend(m: bytes, ecoin: Valued | NonValued):
     assert ecoin.nizk(), 'Blind signature is correct'
-    assert ecoin.nizk.t == ecoin.hy
+    assert ecoin.nizk.t == ecoin.hy, f'{ecoin.nizk.t}\n !=\n {ecoin.hy}'
     assert ecoin.dil.verify(ecoin.blob, ecoin.signature), 'It is signed'
     # FIX: Add ecoin has been spent.
     return ecoin.kyb.enc(int.from_bytes(m))

@@ -78,6 +78,14 @@ class Context[T]:
     def poly_bytes(self):
         return math.ceil(self.degree * math.log2(self.q) / 8)
 
+    @property 
+    def max_trash(self) -> int:
+        poly_bits = self.poly_bytes * 8
+        return math.floor(2 ** (poly_bits - math.log2(self.q) * self.degree)) - 1
+
+    def gen_trashbin(self):
+        return bytes(random.randint(0, self.max_trash) for _ in range(self.k))
+
     def update(self, **kwargs) -> "Context":
         return Context(**(dto.asdict(self) | kwargs))
 
@@ -226,41 +234,42 @@ class Context[T]:
             yield (m % 2) * q2
             m = m // 2
 
-    def digest(self, a_seed: bytes, b: PolyVec) -> bytes:
+    def digest(self, a_seed: bytes, b: PolyVec, trashbin: bytes) -> bytes:
         # NOTE: Hi ha molts molts bits del collapse
-        b_bytes = b"".join(self.poly_to_bits(bi) for bi in b)
+        b_bytes = b"".join(self.poly_to_bits(bi, trash) for bi, trash in zip(b, trashbin))
         return a_seed + b_bytes
 
-    def from_digest(self, nyom: bytes) -> tuple[bytes, PolyVec]:
+    def from_digest(self, nyom: bytes) -> tuple[bytes, PolyVec, bytes]:
         a_seed = nyom[:32]
         b_digest: bytes = nyom[32:]
-        b = self.bits_to_vector(b_digest)
-        return a_seed, b
+        b, trashbin = self.bits_to_vector(b_digest)
+        return a_seed, b, trashbin
 
-    def bits_to_vector(self, bits: bytes) -> PolyVec:
+    def bits_to_vector(self, bits: bytes) -> tuple[PolyVec, bytes]:
         res = []
+        trashbin = []
         for start, end in it.pairwise(range(0, len(bits) + 1, self.poly_bytes)):
-            res.append(self.bits_to_poly(bits[start:end]))
-        return vector(res, self.ZpxQ, immutable=True)
+            poly, trash = self.bits_to_poly(bits[start:end])
+            res.append(poly)
+            trashbin.append(trash)
+        return vector(res, self.ZpxQ, immutable=True), bytes(trashbin)
 
-    def bits_to_poly(self, bits: bytes) -> Poly:
+    def bits_to_poly(self, bits: bytes) -> tuple[Poly, int]:
         assert len(bits) == self.poly_bytes
         n = int.from_bytes(bits)
         res = []
         for _ in range(self.degree):
             res.append(n % self.q)
             n //= self.q
-        if n != 0:
-            print(f"bits_to_poly: n was not 0 {n}")
         res.reverse()
-        return self.ZpxQ(res)
+        return self.ZpxQ(res), n
 
-    def poly_to_bits(self, poly: Poly) -> bytes:
-        def f(a: int, b: int) -> int:
-            return a * self.q + b
+    def poly_to_bits(self, poly: Poly, trash: int) -> bytes:
+        def f(acc: int, b: int) -> int:
+            return acc * self.q + b
 
         all_coefficients = map(int, poly)
-        poly_int = fun.reduce(f, all_coefficients, 0)
+        poly_int = fun.reduce(f, all_coefficients, trash)
         return poly_int.to_bytes(length=self.poly_bytes)
 
     def to_ring(self, m: int) -> Poly:

@@ -92,7 +92,7 @@ class Dilithium:
         element = self.decompose(z, alpha)[1]
         return collapse_bits(element)
 
-    def _to_bytes(self, i: int | bytes ) -> bytes:
+    def _to_bytes(self, i: int | bytes) -> bytes:
         if isinstance(i, bytes):
             return i
         return i.to_bytes(i.bit_length())

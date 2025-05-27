@@ -2,7 +2,6 @@ from src.ecoin import oaep
 import random
 
 import unittest
-from Crypto.Hash import SHAKE256
 
 
 class TestOAEP(unittest.TestCase):

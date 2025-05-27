@@ -6,22 +6,25 @@ Module for postquantic pot.
 
 import dataclasses as dto
 import functools as fun
-from src.context import Context, get_context, AssymetricExtra
+from src.context import Context, AssymetricExtra
 from src.poly import Poly, PolyVec
 from src.count import *
 from src import ajtai
 
+
 @dto.dataclass
 class BlindPK:
     """
-    BlindPK that merchant uses to create the assymetric 
+    BlindPK that merchant uses to create the assymetric
     blind operation.
 
     """
+
     b: Poly
     a: PolyVec
     A: PolyVec
     C: PolyVec
+    # NOTE: this is for testing. Please remove in a serious implementation
     expected_message: PolyVec
     mask: list[int]
     e2: PolyVec
@@ -39,7 +42,7 @@ class BlindPK:
         return self.b * c + e1
 
 
-def create_merchant(ctx: Context) -> BlindPK:
+def create_merchant(ctx: Context[AssymetricExtra]) -> BlindPK:
     # bob_count.n += n_elems + n_cols * 2 + n_matrix * 2
     b = ctx.random_element()
     a = ctx.r_small_vector()
@@ -51,5 +54,3 @@ def create_merchant(ctx: Context) -> BlindPK:
     e2 = ctx.r_small_vector(ctx.more.e2_param)
     r2 = b * C + e2
     return BlindPK(b, a, A, C, expected_message, mask, e2, r2, ctx)
-
-

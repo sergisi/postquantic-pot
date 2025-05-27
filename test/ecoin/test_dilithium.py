@@ -22,8 +22,8 @@ class TestDilithium(unittest.TestCase):
         super().setUp()
 
     def test_matrix_seeded(self):
-        mat = self.ctx.random_matrix(seed=b'12345')
-        mat2 = self.ctx.random_matrix(seed=b'12345')
+        mat = self.ctx.random_matrix(seed=b"12345")
+        mat2 = self.ctx.random_matrix(seed=b"12345")
         self.assertEqual(mat, mat2)
 
     def test_collapse_bits(self):
@@ -57,11 +57,14 @@ class TestDilithium(unittest.TestCase):
             self.assertFalse(self.dilithium.verify(message + 10, sig))
 
     def test_digest_and_from(self):
-        digest = self.ctx.digest(self.dilithium.a_seed, self.dilithium.b, self.dilithium.trashbin)
-        digest2 = self.ctx.digest(self.dilithium.a_seed, self.dilithium.b, self.dilithium.trashbin)
+        digest = self.ctx.digest(
+            self.dilithium.a_seed, self.dilithium.b, self.dilithium.trashbin
+        )
+        digest2 = self.ctx.digest(
+            self.dilithium.a_seed, self.dilithium.b, self.dilithium.trashbin
+        )
         self.assertEqual(digest, digest2, "Digest is not deterministic")
         a_seed, b, trashbin_got = self.ctx.from_digest(digest)
         self.assertEqual(self.dilithium.a_seed, a_seed)
         self.assertEqual(self.dilithium.b, b)
         self.assertEqual(self.dilithium.trashbin, trashbin_got)
-

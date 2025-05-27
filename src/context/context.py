@@ -78,7 +78,7 @@ class Context[T]:
     def poly_bytes(self):
         return math.ceil(self.degree * math.log2(self.q) / 8)
 
-    @property 
+    @property
     def max_trash(self) -> int:
         poly_bits = self.poly_bytes * 8
         return math.floor(2 ** (poly_bits - math.log2(self.q) * self.degree)) - 1
@@ -236,7 +236,9 @@ class Context[T]:
 
     def digest(self, a_seed: bytes, b: PolyVec, trashbin: bytes) -> bytes:
         # NOTE: Hi ha molts molts bits del collapse
-        b_bytes = b"".join(self.poly_to_bits(bi, trash) for bi, trash in zip(b, trashbin))
+        b_bytes = b"".join(
+            self.poly_to_bits(bi, trash) for bi, trash in zip(b, trashbin)
+        )
         return a_seed + b_bytes
 
     def from_digest(self, nyom: bytes) -> tuple[bytes, PolyVec, bytes]:

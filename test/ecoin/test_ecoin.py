@@ -1,6 +1,14 @@
 import unittest
 import random
-from src.ecoin import FatContext, gotta_go_fat, Valued, create_valued, merchant_spend, NonValued, create_nonvalued
+from src.ecoin import (
+    FatContext,
+    gotta_go_fat,
+    Valued,
+    create_valued,
+    merchant_spend,
+    NonValued,
+    create_nonvalued,
+)
 
 
 class TestEcoinProtocol(unittest.TestCase):
@@ -10,7 +18,7 @@ class TestEcoinProtocol(unittest.TestCase):
         # NOTE: this is cached
         self.fatctx = gotta_go_fat()
         super().setUp()
-        
+
     def test_valued(self):
         valued: Valued = create_valued(self.fatctx)
         m = random.randbytes(32)

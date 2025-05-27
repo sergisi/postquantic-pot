@@ -28,5 +28,5 @@ class TestKyber(unittest.TestCase):
         self.assertEqual(digest, digest2, "Digest is not deterministic")
         a_seed, b, trashbin = self.ctx.from_digest(digest)
         self.assertEqual(self.kyber.a_seed, a_seed)
-        self.assertEqual(self.kyber.b,  b)
+        self.assertEqual(self.kyber.b, b)
         self.assertEqual(self.kyber.trashbin, trashbin)

@@ -17,8 +17,6 @@ class KyberPK:
     trashbin: bytes
     ctx: Context[None]
 
-
-
     def digest(self) -> tuple[bytes, bytes]:
         """
         32 bytes that represents the dilithium pk.
@@ -51,7 +49,6 @@ class Kyber:
         """
         return secrets.token_bytes(32)
 
-
     @fun.cached_property
     def trashbin(self):
         """
@@ -60,7 +57,6 @@ class Kyber:
         """
         return self.ctx.gen_trashbin()
 
- 
     def digest(self) -> tuple[bytes, bytes]:
         """
         32 bytes that represents the dilithium pk.
@@ -77,8 +73,7 @@ class Kyber:
         r = self.ctx.r_small_vector()
         e1 = self.ctx.r_small_vector()
         e2 = self.ctx.r_small()
-        return (self.A.transpose() * r + e1, 
-                self.b * r + e2 + self.ctx.to_ring(m))
+        return (self.A.transpose() * r + e1, self.b * r + e2 + self.ctx.to_ring(m))
 
     def dec(self, c):
         u, v = c

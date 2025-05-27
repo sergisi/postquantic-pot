@@ -4,11 +4,44 @@ description:
 authors: sergi
 categories: 
 created: 2025-05-21T13:24:41+0100
-updated: 2025-05-22T11:22:14+0100
+updated: 2025-05-27T11:05:57+0100
 version: 1.1.1
 @end
 
-El protocol esta bastant regular. No esta separat per
-actors.
+Pel protocol: 
+
+* Que he de mesurar?
+  - El cost del set-up.
+  - La creació de monedes
+  - Gastar les monedes
+
+* (x) Set-up
+  Es crear un fatctx (per les monedes ) i el que el protocol
+  assimetric necessita.
+
+* ( ) Creació de les monedes.
+  Limitem el nombre de monedes a 16. Contant a centims, aixo 
+  arriba a $655.36€$, que crec que es suficient.
+
+  No es necessita fer codi, farem un preu exacte simulat, i es
+  gastara sol.
+
+* Gastar les monedes.
+  Ha de comprar un item sencer:
+  ~ L'usuari envia les monedes en que ha de fer el canvi
+  ~ El comerciant per cada moneda comprova que sigui correcte i
+    encripta la informació 
+  ~ L'usuari per cada moneda valuada desencripta la clau i les 
+    ajunta.
+    
+
+  - El protocol retorna cert si la clau obtinguda es el mateix que
+    el que s'ha guardat anteriorment.
+
+* Mesurar els temps
+  - Es mesuren el temps de les tres etapes.
+  - Es posen els resultats experimentals pel temps a l'article.
+  - Es fa amb 16 monedes i 32 monedes.
+
 
 

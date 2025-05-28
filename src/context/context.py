@@ -221,8 +221,8 @@ class Context[T]:
         res = sorted(res)
         return res
 
-    def apply_mask(self, ls, mask):
-        return sum(x * 2**i for x, i in enumerate(ls[i] for i in mask))
+    def apply_mask(self, ls, mask: list[int]) -> bytes:
+        return sum(x * 2**i for x, i in enumerate(ls[i] for i in mask)).to_bytes(len(mask) // 8)
 
     def from_ring(self, m: Poly) -> int:
         m_it = self.collapse(m)

@@ -75,7 +75,7 @@ class Kyber:
         e2 = self.ctx.r_small()
         return (self.A.transpose() * r + e1, self.b * r + e2 + self.ctx.to_ring(m))
 
-    def dec(self, c):
+    def dec(self, c: tuple[PolyVec, PolyVec]) -> int:
         u, v = c
         return self.ctx.from_ring(v - self.s * u)
 

@@ -4,7 +4,7 @@ from src.poly import PolyVec
 from .merchant import BlindPK, create_merchant
 
 
-def _nizk(merchant: BlindPK, s: PolyVec, ctx: Context) -> ajtai.AjtaiCommitment:
+def blind_nizk(merchant: BlindPK, s: PolyVec, ctx: Context) -> ajtai.AjtaiCommitment:
     return ajtai.ajtai_commitment(
         [merchant.A, merchant.C],
         [merchant.a, s],
@@ -15,7 +15,7 @@ def _nizk(merchant: BlindPK, s: PolyVec, ctx: Context) -> ajtai.AjtaiCommitment:
 
 def _protocol(merchant: BlindPK, ctx: Context) -> int:
     s = ctx.r_small_vector()  # Default
-    nizk = _nizk(merchant, s, ctx)
+    nizk = blind_nizk(merchant, s, ctx)
     # NOTE: This is executed by the Merchant for r1 and r2
     r1 = merchant.compute_r1(nizk)
     ab_product = r1 - merchant.r2 * s

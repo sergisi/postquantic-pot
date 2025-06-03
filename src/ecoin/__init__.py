@@ -38,9 +38,8 @@ def gotta_go_fat() -> FatContext:
     )
 
 
-@fun.lru_cache(maxsize=1)
-def get_fatctx() -> FatContext:
-    ctx = get_context()
+def get_fatctx(degree: int = 1024) -> FatContext:
+    ctx = get_context(degree)
     return FatContext(
         kyber=get_kyber_context(),
         dilithium=get_dilithium_context(),

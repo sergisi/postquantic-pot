@@ -13,7 +13,7 @@ def blind_nizk(merchant: BlindPK, s: PolyVec, ctx: Context) -> ajtai.AjtaiCommit
     )
 
 
-def _protocol(merchant: BlindPK, ctx: Context) -> int:
+def _protocol(merchant: BlindPK, ctx: Context) -> bytes:
     s = ctx.r_small_vector()  # Default
     nizk = blind_nizk(merchant, s, ctx)
     # NOTE: This is executed by the Merchant for r1 and r2

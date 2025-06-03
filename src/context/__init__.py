@@ -38,11 +38,11 @@ def get_dilithium_context() -> Context[DilithiumExtra]:
 
 @fun.lru_cache
 def get_context(
-    cbd_noise=2, e1_param=100_000, e2_param=200
+    cbd_noise=2, e1_param=100_000, e2_param=200, degree: int = 1024
 ) -> Context[AssymetricExtra]:
     return Context(
         q=Integer(12 * 1024 + 1),
-        degree=1024,
+        degree=degree,
         k=2,
         l=2,
         cbd_noise=cbd_noise,
@@ -53,6 +53,7 @@ def get_context(
             e2_param=e2_param,
         ),
     )
+
 
 
 @fun.lru_cache(maxsize=1)

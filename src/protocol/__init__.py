@@ -25,8 +25,8 @@ class ProtocolContext:
     """
 
 
-def set_up_pctx(max_coins: int=16) -> ProtocolContext:
-    fatctx = ecoin.get_fatctx()
+def set_up_pctx(max_coins: int=16, degree: int=1024) -> ProtocolContext:
+    fatctx = ecoin.get_fatctx(degree)
     blindpk = [assymetric.create_merchant(fatctx.ctx) for _ in range(max_coins)]
     return ProtocolContext(fatctx=fatctx, blindpk=blindpk, max_coins=max_coins)
 

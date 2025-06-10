@@ -18,34 +18,36 @@ from . import kyber, dilithium, oaep
 
 
 @dto.dataclass
-class FatContext:
+class ECoinCtx:
     kyber: Context[None]
     dilithium: Context[DilithiumExtra]
     ctx: Context[AssymetricExtra]
     falcon: falcon.MyFalcon
-    B: PolyVec
+    B1: PolyVec
+    B2: PolyVec
 
 
-@fun.lru_cache(maxsize=1)
-def gotta_go_fat() -> FatContext:
+def gotta_go_ecoin() -> ECoinCtx:
     ctx = gotta_go_fast_context()
-    return FatContext(
+    return ECoinCtx(
         kyber=get_kyber_context(),
         dilithium=get_dilithium_context(),
         ctx=ctx,
         falcon=falcon.MyFalcon(ctx),
-        B=ctx.random_vector(),
+        B1=ctx.random_vector(),
+        B2=ctx.random_vector(),
     )
 
 
-def get_fatctx(degree: int = 1024) -> FatContext:
+def get_ecoin_ctx(degree: int = 1024) -> ECoinCtx:
     ctx = get_context(degree)
-    return FatContext(
+    return ECoinCtx(
         kyber=get_kyber_context(),
         dilithium=get_dilithium_context(),
         ctx=ctx,
         falcon=falcon.MyFalcon(ctx),
-        B=ctx.random_vector(),
+        B1=ctx.random_vector(),
+        B2=ctx.random_vector(),
     )
 
 
@@ -55,7 +57,7 @@ class Valued:
     dil: dilithium.Dilithium
     r: bytes
     nizk: ajtai.AjtaiCommitment
-    fatctx: FatContext
+    fatctx: ECoinCtx
 
     @property
     def blob(self):
@@ -80,7 +82,7 @@ class NonValued:
     dil: dilithium.Dilithium
     r: bytes
     nizk: ajtai.AjtaiCommitment
-    fatctx: FatContext
+    fatctx: ECoinCtx
 
     @property
     def blob(self):
@@ -106,7 +108,7 @@ def sum_all(matrices, vectors):
     return sum(A * y for A, y in zip(matrices, vectors))
 
 
-def create_valued(fatctx: FatContext):
+def create_valued(fatctx: ECoinCtx):
     kyb = kyber.kyber_key_gen(fatctx.kyber)
     dil = dilithium.dilithium_key_gen(fatctx.dilithium)
     blob = bytes(map(operator.xor, kyb.digest()[1], dil.digest()[1]))
@@ -114,32 +116,31 @@ def create_valued(fatctx: FatContext):
     x, y = oaep.enc(blob, r)
     hy, _ = fatctx.ctx.bits_to_poly(y)
     x = fatctx.ctx.r_small_vector()
-    t = hy - fatctx.falcon.A * x
+    t = hy + fatctx.B1 * x
     s, r2 = merchant_blind_sign(t, fatctx)
-    s_prime = s + x
     nizk = ajtai.ajtai_commitment(
-        matrices=[fatctx.falcon.A, fatctx.B],
-        vectors=[s_prime, -r2],
+        matrices=[fatctx.falcon.A, fatctx.B1, fatctx.B2],
+        vectors=[s, -x, -r2],
         ctx=fatctx.ctx,
         f=sum_all,
     )
     return Valued(kyb, dil, r, nizk, fatctx)
 
 
-def merchant_blind_sign(t: Poly, fatctx: FatContext) -> tuple[PolyVec, PolyVec]:
+def merchant_blind_sign(t: Poly, fatctx: ECoinCtx) -> tuple[PolyVec, PolyVec]:
     r2 = fatctx.ctx.r_small_vector()
-    s = fatctx.falcon.my_sign(t + fatctx.B * r2)
+    s = fatctx.falcon.my_sign(t + fatctx.B2 * r2)
     return s, r2
 
 
-def create_nonvalued(fatctx: FatContext) -> NonValued:
-    s_prime = fatctx.ctx.r_small_vector()
+def create_nonvalued(fatctx: ECoinCtx) -> NonValued:
+    s = fatctx.ctx.r_small_vector()
+    x1 = fatctx.ctx.r_small_vector()
     r2 = fatctx.ctx.r_small_vector()
     # fatctx.ctx.
 
-    hy = fatctx.falcon.A * s_prime - fatctx.B * r2
+    hy = fatctx.falcon.A * s -  fatctx.B1 * x1 - fatctx.B2 * r2
     x = secrets.token_bytes(32)
-    # FIX: not hy, but y
     trash = randint(0, fatctx.ctx.max_trash)
     y = fatctx.ctx.poly_to_bits(hy, trash)
     blob, main_r = oaep.dec(x, y)
@@ -153,8 +154,8 @@ def create_nonvalued(fatctx: FatContext) -> NonValued:
         a_seed, fatctx.kyber.random_matrix(seed=a_seed), b, r_r, trashbin, fatctx.kyber
     )
     nizk = ajtai.ajtai_commitment(
-        matrices=[fatctx.falcon.A, fatctx.B],
-        vectors=[s_prime, -r2],
+        matrices=[fatctx.falcon.A, fatctx.B1, fatctx.B2],
+        vectors=[s, -x1, -r2],
         ctx=fatctx.ctx,
         f=sum_all,
     )

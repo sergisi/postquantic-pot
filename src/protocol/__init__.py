@@ -7,46 +7,42 @@ from src import ecoin, assymetric, ajtai
 from src.poly import PolyVec
 
 
+type ProtocolContext = list[TransactionContext]
+
 @dto.dataclass
-class ProtocolContext:
+class TransactionContext:
     """
     Contains all the necessities to perform the protocol.
 
     i.e. the set up.
     """
 
-    fatctx: ecoin.FatContext
-    blindpk: list[assymetric.BlindPK]
-    max_coins: int
-    """
-    Represents the maximum number of coins. the values are 
-    represented on binary, so the maximum price will be
-    $2 ^ {max_coins} - 1$
-    """
+    fatctx: ecoin.ECoinCtx
+    blindpk: assymetric.BlindPK
 
 
 def set_up_pctx(max_coins: int=16, degree: int=1024) -> ProtocolContext:
-    fatctx = ecoin.get_fatctx(degree)
-    blindpk = [assymetric.create_merchant(fatctx.ctx) for _ in range(max_coins)]
-    return ProtocolContext(fatctx=fatctx, blindpk=blindpk, max_coins=max_coins)
+    ecoins =  [ecoin.get_ecoin_ctx(degree) for _ in range(max_coins)]
+    blindpks = [assymetric.create_merchant(fatctx.ctx) for fatctx in ecoins]
+    return [TransactionContext(fatctx, blindpk) for fatctx, blindpk in zip(ecoins, blindpks)]
+
 
 def set_up_fast_pctx() -> ProtocolContext:
-    max_coins = 16
-    fatctx = ecoin.gotta_go_fat()
-    blindpk = [assymetric.create_merchant(fatctx.ctx) for _ in range(max_coins)]
-    return ProtocolContext(fatctx=fatctx, blindpk=blindpk, max_coins=max_coins)
-
+    max_coins = 4
+    ecoins =  [ecoin.gotta_go_ecoin() for _ in range(max_coins)]
+    blindpks = [assymetric.create_merchant(fatctx.ctx) for fatctx in ecoins]
+    return [TransactionContext(fatctx, blindpk) for fatctx, blindpk in zip(ecoins, blindpks)]
 
 type Wallet = list[ecoin.Ecoin]
 
 
 def create_coins(price: int, pctx: ProtocolContext) -> Wallet:
     wallet = []
-    for i in range(pctx.max_coins):
+    for i, trans in enumerate(pctx):
         if price & (1 << i) == 0:
-            wallet.append(ecoin.create_nonvalued(pctx.fatctx))
+            wallet.append(ecoin.create_nonvalued(trans.fatctx))
         else:
-            wallet.append(ecoin.create_valued(pctx.fatctx))
+            wallet.append(ecoin.create_valued(trans.fatctx))
     return wallet
 
 
@@ -71,11 +67,12 @@ def merchant_spend_coin(
 
 def customer_spend_coin(price: int, wallet: Wallet, pctx: ProtocolContext) -> bytes:
     key_gen = SHAKE256.new()
-    for i in range(pctx.max_coins):
-        s = pctx.fatctx.ctx.r_small_vector()  # Default
-        nizk = assymetric.blind_nizk(pctx.blindpk[i], s, pctx.fatctx.ctx)
+    for i, trans in enumerate(pctx):
+
+        s = trans.fatctx.ctx.r_small_vector()  # Default
+        nizk = assymetric.blind_nizk(trans.blindpk, s)
         # NOTE: This is executed by the Merchant for r1 and r2
-        cpt = merchant_spend_coin(wallet[i], nizk, pctx.blindpk[i])
+        cpt = merchant_spend_coin(wallet[i], nizk, trans.blindpk)
         if price & (1 << i) != 0:
             valued_ecoin= wallet[i]
             assert isinstance(valued_ecoin, ecoin.Valued)
@@ -83,10 +80,10 @@ def customer_spend_coin(price: int, wallet: Wallet, pctx: ProtocolContext) -> by
             cipher = AES.new(key.to_bytes(32), AES.MODE_EAX, nonce=cpt.nonce)
             byt = cipher.decrypt(cpt.ciphertext)
             cipher.verify(cpt.tag)
-            r1, _ = pctx.fatctx.ctx.bits_to_poly(byt)
-            ab_product = r1 - pctx.blindpk[i].r2 * s
-            ctx = pctx.fatctx.ctx
-            blob = ctx.apply_mask(ctx.collapse(ab_product), pctx.blindpk[i].mask)
+            r1, _ = trans.fatctx.ctx.bits_to_poly(byt)
+            ab_product = r1 - trans.blindpk.r2 * s
+            ctx = trans.fatctx.ctx
+            blob = ctx.apply_mask(ctx.collapse(ab_product), trans.blindpk.mask)
             key_gen.update(blob)
     return key_gen.read(32)
 

@@ -209,20 +209,21 @@ class Context[T]:
         p = self.q
         q2 = p // 2
         v1 = (int(coef) % p for coef in v)
-        v2 = (coef if coef < q2 else p - coef for coef in v1)
-        q4 = q2 // 2
-        v3 = (abs(coef - q4) for coef in v2)
-        v4 = ((c, i) for i, c in enumerate(v3))
-        v5 = list(filter(lambda x: x[0] > self.safe_mask, v4))
-        res = random.sample(v5, k=self.degree // 4)
+        q1 = p // 4
+        q3 = p * 3 // 4
+        v2 = (min(abs(coef - q1), abs(coef - q3)) for coef in v1)
+        v3 = ((c, i) for i, c in enumerate(v2))
+        v4 = list(filter(lambda x: x[0] > self.safe_mask, v3))
+        res = random.sample(v4, k=self.degree // 4)
         # gotta_go_fast breaks if not
         # but on normal executions it will still be 256
-        res = [i for _, i in res]
-        res = sorted(res)
+        res = sorted(i for _, i in res)
         return res
 
     def apply_mask(self, ls, mask: list[int]) -> bytes:
-        return sum(x * 2**i for x, i in enumerate(ls[i] for i in mask)).to_bytes(len(mask) // 8)
+        return sum(x * 2**i for i, x in enumerate(ls[i] for i in mask)).to_bytes(
+            math.ceil(len(mask) / 8)
+        )
 
     def from_ring(self, m: Poly) -> int:
         m_it = self.collapse(m)

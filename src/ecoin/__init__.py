@@ -139,7 +139,7 @@ def create_nonvalued(fatctx: ECoinCtx) -> NonValued:
     r2 = fatctx.ctx.r_small_vector()
     # fatctx.ctx.
 
-    hy = fatctx.falcon.A * s -  fatctx.B1 * x1 - fatctx.B2 * r2
+    hy = fatctx.falcon.A * s - fatctx.B1 * x1 - fatctx.B2 * r2
     x = secrets.token_bytes(32)
     trash = randint(0, fatctx.ctx.max_trash)
     y = fatctx.ctx.poly_to_bits(hy, trash)
@@ -162,9 +162,18 @@ def create_nonvalued(fatctx: ECoinCtx) -> NonValued:
     return NonValued(kyb_pk, dil, main_r, nizk, fatctx)
 
 
-def merchant_spend(m: bytes, ecoin: Valued | NonValued):
-    assert ecoin.nizk(), "Blind signature is correct"
-    assert ecoin.nizk.t == ecoin.hy, f"{ecoin.nizk.t}\n !=\n {ecoin.hy}"
-    assert ecoin.dil.verify(ecoin.blob, ecoin.signature), "It is signed"
-    # FIX: Add ecoin has been spent.
-    return ecoin.kyb.enc(int.from_bytes(m))
+def create_merchant_spend():
+    _db: set = set()
+
+    def f(m: bytes, ecoin: Valued | NonValued) -> tuple[PolyVec, PolyVec]:
+        assert ecoin.nizk(), "Blind signature is correct"
+        assert ecoin.nizk.t == ecoin.hy, f"{ecoin.nizk.t}\n !=\n {ecoin.hy}"
+        assert ecoin.dil.verify(ecoin.blob, ecoin.signature), "It is signed"
+        assert ecoin.hy not in _db, "It has been spend before"
+        _db.add(ecoin.hy)
+        return ecoin.kyb.enc(int.from_bytes(m))
+
+    return f
+
+
+merchant_spend = create_merchant_spend()

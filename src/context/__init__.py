@@ -14,7 +14,7 @@ def get_kyber_context() -> Context[None]:
         l=4,
         cbd_noise=2,
         rej_sampling_module=5,
-        safe_mask=500,
+        safe_mask=758,
         more=None,
     )
 
@@ -31,15 +31,24 @@ def get_dilithium_context() -> Context[DilithiumExtra]:
         l=4,
         cbd_noise=2,
         rej_sampling_module=5,
-        safe_mask=500,
+        safe_mask=758,
         more=DilithiumExtra(gamma1=2**17, gamma2=(q - 1) // 88, beta=78, tau=39),
     )
 
 
 @fun.lru_cache
 def get_context(
-    cbd_noise=2, e1_param=100_000, e2_param=200, degree: int = 1024
+    cbd_noise=2, e1_param=27659, e2_param=2, degree: int = 1024
 ) -> Context[AssymetricExtra]:
+    """
+    For a safe_mask of 2000, the noise parameter should be
+    e1_param=39 967.
+
+    Nevertheless, for a safe_mask to have the negligable
+    probability of failure of 2^{-128}, the safe_mask=1698
+    and e1_param=27 659
+
+    """
     return Context(
         q=Integer(12 * 1024 + 1),
         degree=degree,
@@ -47,13 +56,12 @@ def get_context(
         l=2,
         cbd_noise=cbd_noise,
         rej_sampling_module=5,
-        safe_mask=2000,
+        safe_mask=1698,
         more=AssymetricExtra(
             e1_param=e1_param,
             e2_param=e2_param,
         ),
     )
-
 
 
 @fun.lru_cache(maxsize=1)
@@ -65,7 +73,7 @@ def gotta_go_fast_context() -> Context[AssymetricExtra]:
         l=2,
         cbd_noise=2,
         rej_sampling_module=5,
-        safe_mask=2000,
+        safe_mask=758,
         more=AssymetricExtra(
             e1_param=2,
             e2_param=2,

@@ -22,8 +22,9 @@ def _protocol(merchant: BlindPK, ctx: Context) -> bytes:
     return ctx.apply_mask(ctx.collapse(ab_product), merchant.mask)
 
 
-def protocol(cbd_noise=2, e1_param=100_000, e2_param=200) -> bool:
+def protocol(cbd_noise=2, e1_param=39967, e2_param=2) -> bool:
     ctx = get_context(cbd_noise, e1_param, e2_param)
     set_up_data = create_merchant(ctx)
     key_got = _protocol(set_up_data, ctx)
+    breakpoint()
     return set_up_data.expected_message == key_got

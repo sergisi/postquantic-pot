@@ -42,15 +42,13 @@ class BlindPK:
         return self.b * c + e1
 
 
-def create_merchant(ctx: Context[AssymetricExtra]) -> BlindPK:
+# , A: PolyVec, C: PolyVec
+def create_merchant(ctx: Context[AssymetricExtra], A: PolyVec, C: PolyVec) -> BlindPK:
     # bob_count.n += n_elems + n_cols * 2 + n_matrix * 2
     b = ctx.random_element()
     a = ctx.r_small_vector()
-    A = ctx.random_vector()
-    C = ctx.random_vector()
-    #  FIX: A i C poden ser reaprofitades, creiem
     expected_message = b * A * a
-    # NOTE: This should be made for each item in 
+    # NOTE: This should be made for each item in
     mask = ctx.get_mask_of_element(expected_message)
     # not counted
     e2 = ctx.r_small_vector(ctx.more.e2_param)

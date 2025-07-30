@@ -1,6 +1,8 @@
+from os import rename
 import random
 from concurrent.futures import ProcessPoolExecutor
 from click import style
+from pandas import DataFrame
 import typer
 import traceback
 import itertools
@@ -44,10 +46,10 @@ def timed_protocol(max_coins: int = 16, degree: int = 1024, price: int | None = 
     if price == None:
         price = random.getrandbits(max_coins)
     t0 = time.time()
-    ctx, ecoins = set_up_ecoins(max_coins, degree)
+    ctx, ecoins, A, C = set_up_ecoins(max_coins, degree)
     set_up = time.time() - t0
     t0 = time.time()
-    pctx = items_preparation(ctx, ecoins)
+    pctx = items_preparation(ctx, ecoins, A, C)
     items_prep = time.time() - t0
     t0 = time.time()
     wallet = create_coins(price, pctx)
@@ -69,8 +71,8 @@ def protocol(max_coins: int = 16):
 
     """
     # TODO: This needs a much better explanation
-    ctx, ecoins = set_up_ecoins(max_coins)
-    pctx = items_preparation(ctx, ecoins)
+    ctx, ecoins, A, C = set_up_ecoins(max_coins)
+    pctx = items_preparation(ctx, ecoins, A, C)
     price = random.getrandbits(len(pctx))
     wallet = create_coins(price, pctx)
     _ = customer_spend_coin(price, wallet, pctx)
@@ -150,7 +152,7 @@ def create_plot_priced(filename="time-coin.csv"):
     df = pd.melt(
         data,
         id_vars=["max_coins", "price"],
-        value_vars=["wallet_creation", "item_acquisition"],
+        value_vars=["items_preparation", wallet_creation", "item_acquisition"],
     )
     sns.lineplot(df, x="max_coins", y="value", hue="variable")
     plt.xlabel("#E-coins")
@@ -208,11 +210,12 @@ def create_plot(filename="time.csv"):
 
     sns.set_theme()
     data = pd.read_csv(filename)
-    df = pd.melt(
+    df: pd.DataFrame = pd.melt(
         data,
         id_vars=["max_coins", "degree"],
         value_vars=["wallet_creation", "item_acquisition", "items_preparation"],
     )
+    df.rename()
     sns.lineplot(df, x="max_coins", y="value", hue="variable")
     plt.xlabel("#E-coins")
     plt.ylabel("Time (s)")

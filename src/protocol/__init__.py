@@ -27,18 +27,19 @@ class TransactionContext:
 # TODO: Separar el set up del items preparation i que continui funcionant
 def set_up_ecoins(
     max_coins: int = 16, degree: int = 1024
-) -> tuple[Context[AssymetricExtra], list[ecoin.ECoinCtx]]:
+) -> tuple[Context[AssymetricExtra], list[ecoin.ECoinCtx],
+PolyVec, PolyVec]:
     # NOTE: set-up
     ctx = get_context(degree)
     ecoins = [ecoin.get_ecoin_ctx(degree) for _ in range(max_coins)]
-    return ctx, ecoins
+    A = ctx.random_vector()
+    C = ctx.random_vector()
+    return ctx, ecoins, A, C
 
 
 def items_preparation(
-    ctx: Context[AssymetricExtra], ecoins: list[ecoin.ECoinCtx]
+    ctx: Context[AssymetricExtra], ecoins: list[ecoin.ECoinCtx], A: PolyVec, C: PolyVec
 ) -> ProtocolContext:
-    A = ctx.random_vector()
-    C = ctx.random_vector()
     blindpks = [assymetric.create_merchant(fatctx.ctx, A, C) for fatctx in ecoins]
     return [
         TransactionContext(fatctx, blindpk) for fatctx, blindpk in zip(ecoins, blindpks)

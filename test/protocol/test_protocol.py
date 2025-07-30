@@ -17,8 +17,8 @@ class TestWholeProtocol(unittest.TestCase):
     pctx: ProtocolContext
 
     def setUp(self) -> None:
-        ctx, ecoin = set_up_ecoins(max_coins=4)
-        self.pctx = items_preparation(ctx, ecoin)
+        ctx, ecoin, A, C = set_up_ecoins(max_coins=4)
+        self.pctx = items_preparation(ctx, ecoin, A, C)
         return super().setUp()
 
     def test_protocol(self):
